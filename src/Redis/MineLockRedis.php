@@ -43,6 +43,8 @@ class MineLockRedis extends AbstractRedis implements MineRedisInterface
      */
     public function run(\Closure $closure, string $key, int $expired, int $timeout = 0, float $sleep = 0.1): bool
     {
+        $startTime = microtime(true);
+
         if (! $this->lock($key, $expired, $timeout, $sleep)) {
             return false;
         }
@@ -56,7 +58,11 @@ class MineLockRedis extends AbstractRedis implements MineRedisInterface
             $this->getLogger()->error(t('mineadmin.redis_lock_error'), [$e->getMessage(), $e->getTrace()]);
             throw new NormalStatusException(t('mineadmin.redis_lock_error'), 500);
         } finally {
-            $this->freed($key);
+            $endTime = microtime(true);
+            $executionTime = $endTime - $startTime;
+            if ($executionTime < $expired) {
+                $this->freed($key);
+            }
         }
 
         return true;
